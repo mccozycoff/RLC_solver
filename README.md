@@ -11,5 +11,5 @@ All graphic interfaces are provided by olcPixelGameEngine.h header file (see htt
 
 ### Compilation details
 
-Project succesfuly builds with MSVC compiler (v142, should work with older versions too)
+Project configuration can be opened in Microsoft Visual studio. Sources build succesfuly with MSVC compiler (v142, should work with older versions too)
 
