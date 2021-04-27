@@ -15,18 +15,18 @@ struct DrawingMenu
 		ElementType type = RESISTOR;
 		olc::vi2d position{ 10, 10 };
 		olc::vi2d size{ 32, 20 };
-		std::vector<olc::vi2d> points[2] = { { {-12,0}, {-9, 0}, {-7, 8}, {-2, -8}, {2, 8}, {7, -8}, {9, 0}, {12,0} },
-											{ {0,-12}, {0, -9}, {8, -7}, {-8, -2}, {8, 2}, {-8, 7}, {0, 9}, {0,12}} };
+		std::vector<olc::vi2d> points[2] = { { {-16,0}, {-9, 0}, {-7, 8}, {-2, -8}, {2, 8}, {7, -8}, {9, 0}, {16,0} },
+											{ {0,-16}, {0, -9}, {8, -7}, {-8, -2}, {8, 2}, {-8, 7}, {0, 9}, {0,16}} };
 	} resistor;
 	struct
 	{
 		ElementType type = CAPACITOR;
 		olc::vi2d position{ 47, 10 };
 		olc::vi2d size{ 32, 20 };
-		std::vector<olc::vi2d> points_l[2] = { { {-10, 0}, {-6,0},{-6, 8}, {-5, 8}, {-5, -8}, {-6, -8}, {-6,0} },
-												{ {0, -10}, {0,-6},{8, -6}, {8, -5}, {-8, -5}, {-8, -6}, {0,-6} } };
-		std::vector<olc::vi2d> points_r[2] = { { {10, 0}, {6, 0}, { 6, 8 }, {5, 8}, { 5, -8 }, { 6, -8 }, {6, 0} },
-											{ {0, 10}, {0, 6}, { 8, 6 }, {8, 5}, { -8, 5 }, { -8, 6 }, {0, 6} } };
+		std::vector<olc::vi2d> points_l[2] = { { {-16, 0}, {-6,0},{-6, 8}, {-5, 8}, {-5, -8}, {-6, -8}, {-6,0} },
+												{ {0, -16}, {0,-6},{8, -6}, {8, -5}, {-8, -5}, {-8, -6}, {0,-6} } };
+		std::vector<olc::vi2d> points_r[2] = { { {16, 0}, {6, 0}, { 6, 8 }, {5, 8}, { 5, -8 }, { 6, -8 }, {6, 0} },
+											{ {0, 16}, {0, 6}, { 8, 6 }, {8, 5}, { -8, 5 }, { -8, 6 }, {0, 6} } };
 	} capacitor;
 	struct
 	{
@@ -41,14 +41,14 @@ struct DrawingMenu
 		ElementType type = DC_SOURCE;
 		olc::vi2d position{ 121, 10 };
 		olc::vi2d size{ 32, 20 };
-		std::vector<olc::vi2d> points_l[4] = { { {-10, 0}, {-6, 0 }, {-6, -8}, { -3, -8 }, { -3, 8 }, { -6, 8 }, {-6, 0} },
-												{ {0, -10}, {0, -6 }, {-8, -6}, { -8, -3 }, { 8, -3 }, { 8, -6 }, {0, -6} },
-												{ {10, 0}, {6, 0 }, {6, -8}, { 3, -8 }, { 3, 8 }, { 6, 8 }, {6, 0} },
-												{ {0, 10}, {0, 6 }, {-8, 6}, { -8, 3 }, { 8, 3 }, { 8, 6 }, {0, 6} } };
-		std::vector<olc::vi2d> points_r[4] = { { {10, 0}, {6,0}, {6, -5}, {3, -5}, {3, 5},{6, 5},{6,0} },
-												{ {0, 10}, {0,6}, {-5, 6}, {-5, 3}, {5, 3},{5, 6},{0,6} },
-												{ {-10, 0}, {-6,0}, {-6, -5}, {-3, -5}, {-3, 5},{-6, 5},{-6,0} },
-												{ {0, -10}, {0,-6}, {-5, -6}, {-5, -3}, {5, -3},{5, -6},{0,-6} } };
+		std::vector<olc::vi2d> points_l[4] = { { {-16, 0}, {-6, 0 }, {-6, -8}, { -3, -8 }, { -3, 8 }, { -6, 8 }, {-6, 0} },
+												{ {0, -16}, {0, -6 }, {-8, -6}, { -8, -3 }, { 8, -3 }, { 8, -6 }, {0, -6} },
+												{ {16, 0}, {6, 0 }, {6, -8}, { 3, -8 }, { 3, 8 }, { 6, 8 }, {6, 0} },
+												{ {0, 16}, {0, 6 }, {-8, 6}, { -8, 3 }, { 8, 3 }, { 8, 6 }, {0, 6} } };
+		std::vector<olc::vi2d> points_r[4] = { { {16, 0}, {6,0}, {6, -5}, {3, -5}, {3, 5},{6, 5},{6,0} },
+												{ {0, 16}, {0,6}, {-5, 6}, {-5, 3}, {5, 3},{5, 6},{0,6} },
+												{ {-16, 0}, {-6,0}, {-6, -5}, {-3, -5}, {-3, 5},{-6, 5},{-6,0} },
+												{ {0, -16}, {0,-6}, {-5, -6}, {-5, -3}, {5, -3},{5, -6},{0,-6} } };
 	} dcSource;
 	struct
 	{
@@ -59,6 +59,7 @@ struct DrawingMenu
 		olc::vi2d anchor;
 		ElementModel_T* elementAnchorPtr;
 		bool isPathLegit = true;
+		int rotation = 0;
 	} wire;
 	struct
 	{
@@ -86,9 +87,11 @@ public:
 	bool isInRect(olc::vi2d& point, olc::vi2d& pos, olc::vi2d& size);
 	void DrawOnline(olc::vi2d& mousePos, Solver* appPtr, ElementModel_T& elementToDraw, Circuit& myCircuit);
 	void DrawElement(olc::vi2d offset, Solver* appPtr, ElementType element, int rotation = 0, bool contour = false, olc::Pixel color = olc::WHITE);
-	void DrawWire(olc::vi2d& mousePos, Solver* appPtr, Circuit& myCircuit);
+	void DrawWire(WireModel_T& wire, Solver* appPtr, Circuit& myCircuit, olc::Pixel colour = olc::WHITE);
 	void AnchorNode(ElementModel_T& element, olc::vi2d& mousePos);
 	void AnchorNode(olc::vi2d& mousePos);
+	void PortNode(ElementModel_T& element, ElementModel_T& wire, olc::vi2d& mousePos);
+	void GlowUpElement(ElementModel_T* touch_ptr, Solver* appPtr, Circuit& myCircuit);
 };
 
 #endif

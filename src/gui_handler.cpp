@@ -15,8 +15,9 @@ void GUI_handler::DrawScheme(Circuit& circuit, Solver* app_ptr)
 		DrawElement((*circuit.GetElements())[n]->position, app_ptr, (*circuit.GetElements())[n]->type, (*circuit.GetElements())[n]->rotation);
 	}
 
-	for (int n = 0; n < (*circuit.GetNodes()).size(); n++)
+	for (int n = 0; n < (*circuit.GetWires()).size(); n++)
 	{
+		DrawWire(*(*circuit.GetWires())[n] , app_ptr, circuit);
 		// TBD
 	}
 }
@@ -89,7 +90,10 @@ void GUI_handler::StateMachine(olc::vi2d& mousePos, olc::HWButton& buttonState, 
 		}
 	}
 	if (touch_ptr != nullptr && touch_ptr->isTouched)
-		DrawElement(touch_ptr->position, appPtr, touch_ptr->type, touch_ptr->rotation, true, olc::RED);
+		GlowUpElement(touch_ptr,appPtr,myCircuit);
+
+	//if (appPtr->GetKey(olc::DEL).bPressed && touch_ptr != nullptr)
+		//myCircuit.DeleteElement(*touch_ptr);
 
 	break;
 	}
@@ -97,6 +101,7 @@ void GUI_handler::StateMachine(olc::vi2d& mousePos, olc::HWButton& buttonState, 
 		DrawOnline(mousePos, appPtr, *modelPtr, myCircuit);
 		if (true == appPtr->GetMouse(1).bPressed)
 		{
+			delete modelPtr;
 			switchState(IDLE, &modelPtr);
 		}
 		else if (buttonState.bPressed && IsAreaPermited(mousePos))
@@ -109,14 +114,18 @@ void GUI_handler::StateMachine(olc::vi2d& mousePos, olc::HWButton& buttonState, 
 			}
 			else if (Menu.drawThis == WIRE)
 			{
-				myCircuit.AddElement(*modelPtr, mousePos);
+				PortNode(*element_touched_ptr, *modelPtr, mousePos);
 				//Makes node if Menu.wire.elementAnchorPtr != nullptr and mousePos anchores another (permited) element
-				if (Menu.wire.elementAnchorPtr != nullptr)
-					myCircuit.MakeNode(*Menu.wire.elementAnchorPtr, *element_touched_ptr);
+				 if(Menu.wire.elementAnchorPtr != nullptr)
+					myCircuit.MakeNode( modelPtr, *element_touched_ptr);
+
+				myCircuit.AddElement(*modelPtr, mousePos);
 
 				switchState(IDLE, &modelPtr);
 			}
 		}
+		if(modelPtr->type == WIRE)	
+			static_cast<WireModel_T*>(modelPtr)->position_prev = modelPtr->position;
 		break;
 
 	case DRAWING_NODE:
@@ -162,7 +171,10 @@ void GUI_handler::switchState(GUI_State state, ElementModel_T** ElementPtr)
 	case IDLE:
 		break;
 	case DRAWING_ELEMENT:
-		*ElementPtr = new ElementModel_T(Menu.drawThis);
+		if (Menu.drawThis == WIRE)
+			*ElementPtr = new WireModel_T();
+		else
+			*ElementPtr = new ElementModel_T(Menu.drawThis);
 		break;
 	case  DRAWING_NODE:
 		break;
@@ -202,6 +214,8 @@ bool GUI_handler::isInRect(olc::vi2d& point, olc::vi2d& pos, olc::vi2d& size)
 
 void GUI_handler::DrawOnline(olc::vi2d& mousePos, Solver* appPtr, ElementModel_T& elementToDraw, Circuit& myCircuit)
 {
+	elementToDraw.position = mousePos;
+
 	if (true == appPtr->GetKey(olc::R).bPressed)
 	{
 		elementToDraw.rotation++;
@@ -211,9 +225,17 @@ void GUI_handler::DrawOnline(olc::vi2d& mousePos, Solver* appPtr, ElementModel_T
 	}
 
 	if (elementToDraw.type != WIRE)
+	{
 		DrawElement(mousePos, appPtr, elementToDraw.type, elementToDraw.rotation);
+	}
 	else
-		DrawWire(mousePos, appPtr, myCircuit);
+	{
+		WireModel_T* wirePtr = static_cast<WireModel_T*>(&elementToDraw);
+		wirePtr->anchor = Menu.wire.anchor;
+		wirePtr->rotation = Menu.wire.rotation;
+		wirePtr->elementAnchorPtr = Menu.wire.elementAnchorPtr;
+		DrawWire(*wirePtr, appPtr, myCircuit);
+	}
 
 }
 
@@ -221,8 +243,10 @@ void GUI_handler::DrawElement(olc::vi2d offset, Solver* appPtr, ElementType elem
 {
 	if (contour)
 	{
-		appPtr->DrawRect(offset - Menu.resistor.size / 2, Menu.resistor.size, color);
-		
+		if(!rotation)
+			appPtr->DrawRect(offset - Menu.resistor.size / 2, Menu.resistor.size, color);
+		else
+			appPtr->DrawRect(offset - olc::vi2d({Menu.resistor.size.y , Menu.resistor.size.x}) / 2, { Menu.resistor.size.y , Menu.resistor.size.x }, color);
 	}
 	switch (element)
 	{
@@ -292,45 +316,49 @@ void GUI_handler::DrawElement(olc::vi2d offset, Solver* appPtr, ElementType elem
 	}
 }
 
-void GUI_handler::DrawWire(olc::vi2d& mousePos, Solver* appPtr, Circuit& myCircuit)
+void GUI_handler::DrawWire(WireModel_T& wire, Solver* appPtr, Circuit& myCircuit, olc::Pixel colour)
 {
-	olc::vi2d temp = mousePos - Menu.wire.anchor;
-	if (!Menu.wire.isPathLegit)
-		Menu.wire.isPathLegit = true;
+
+	olc::vi2d temp = wire.position - wire.anchor;
+	//if (!Menu.wire.isPathLegit)
+	//	Menu.wire.isPathLegit = true;
 
 	for (int n = 0; n < std::abs(temp.x) / Menu.resistor.size.y; n++)
 	{
 
-		if (myCircuit.CircuitTouched({ Menu.wire.anchor.x + (abs(temp.x) / temp.x) * Menu.resistor.size.y * (n + 1), Menu.wire.anchor.y }))
+		if (myCircuit.CircuitTouched({ wire.anchor.x + (abs(temp.x) / temp.x) * Menu.resistor.size.y * (n + 1), wire.anchor.y }))
 			Menu.wire.isPathLegit = false;
 	}
 	for (int n = 0; n < abs(temp.y) / Menu.resistor.size.y; n++)
 	{
-		if (myCircuit.CircuitTouched({ mousePos.x, Menu.wire.anchor.y + (abs(temp.y) / temp.y) * Menu.resistor.size.y * (n + 1) }))
+		if (myCircuit.CircuitTouched({ wire.position.x, wire.anchor.y + (abs(temp.y) / temp.y) * Menu.resistor.size.y * (n + 1) }))
 			Menu.wire.isPathLegit = false;
 	}
 
-	if (Menu.wire.isPathLegit)
+	if (wire.rotation == 0)
 	{
-		appPtr->DrawLine(Menu.wire.anchor, { mousePos.x, Menu.wire.anchor.y });
-		appPtr->DrawLine({ mousePos.x, Menu.wire.anchor.y }, mousePos);
+		appPtr->DrawLine({ wire.position.x, wire.anchor.y }, wire.position, colour);
+		appPtr->DrawLine(wire.anchor, { wire.position.x, wire.anchor.y }, colour);
 	}
 	else
 	{
-		appPtr->DrawLine(Menu.wire.anchor, { mousePos.x, Menu.wire.anchor.y }, olc::RED);
-		appPtr->DrawLine({ mousePos.x, Menu.wire.anchor.y }, mousePos, olc::RED);
+		appPtr->DrawLine({ wire.anchor.x, wire.position.y }, wire.position, colour);
+		appPtr->DrawLine(wire.anchor, { wire.anchor.x, wire.position.y }, colour);
 	}
 
 }
 
 void GUI_handler::AnchorNode(ElementModel_T& element, olc::vi2d& mousePos)
 {
+
 	if (element.rotation % 2 == 0)
 	{
 		if (mousePos.x > element.position.x)
 			Menu.wire.anchor = { element.position.x + element.size.x / 2, element.position.y };
 		else
 			Menu.wire.anchor = { element.position.x - element.size.x / 2, element.position.y };
+
+		Menu.wire.rotation = 0;
 	}
 	else
 	{
@@ -338,10 +366,64 @@ void GUI_handler::AnchorNode(ElementModel_T& element, olc::vi2d& mousePos)
 			Menu.wire.anchor = { element.position.x, element.position.y + element.size.y / 2 };
 		else
 			Menu.wire.anchor = { element.position.x, element.position.y - element.size.y / 2 };
+
+		Menu.wire.rotation = 1;
 	}
+
+	Menu.wire.elementAnchorPtr = &element;
 }
 
 void GUI_handler::AnchorNode(olc::vi2d& mousePos)
 {
 	Menu.wire.anchor = mousePos;
+	Menu.wire.elementAnchorPtr = nullptr;
+	Menu.wire.rotation = 0;
 }
+
+void GUI_handler::PortNode(ElementModel_T& element, ElementModel_T& wire, olc::vi2d& mousePos)
+{
+	WireModel_T* wirePtr = static_cast<WireModel_T*>(&wire);
+	if (element.type == WIRE)
+	{
+		if (wirePtr->position.x - wirePtr->position_prev.x != 0 ) // check direction of wire
+		{
+			wirePtr->position.y = element.position.y;
+		}
+		else
+		{
+			wirePtr->position.x = element.position.x;
+		}
+	}
+	else if (element.rotation % 2 == 0)
+	{
+		if (mousePos.x > element.position.x)
+			wirePtr->position = { element.position.x + element.size.x / 2, element.position.y };
+		else
+			wirePtr->position = { element.position.x - element.size.x / 2, element.position.y };
+
+	}
+	else
+	{
+		if (mousePos.y > element.position.y)
+			wirePtr->position = { element.position.x, element.position.y + element.size.y / 2 };
+		else
+			wirePtr->position = { element.position.x, element.position.y - element.size.y / 2 };
+
+	}
+
+}
+
+void GUI_handler::GlowUpElement(ElementModel_T* touch_ptr, Solver* appPtr, Circuit& myCircuit)
+{
+	if (touch_ptr->type != WIRE)
+	{
+		DrawElement(touch_ptr->position, appPtr, touch_ptr->type, touch_ptr->rotation, true, olc::RED);
+	}
+	else
+	{
+		WireModel_T* wirePtr = static_cast<WireModel_T*>(touch_ptr);
+		DrawWire(*wirePtr, appPtr, myCircuit, olc::RED);
+	}
+
+}
+
