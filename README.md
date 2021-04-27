@@ -13,3 +13,7 @@ All graphic interfaces are provided by olcPixelGameEngine.h header file (see htt
 
 Project configuration can be opened in Microsoft Visual Studio. Sources build succesfuly with MSVC compiler (v142, should work with older versions too)
 
+
+#### shortcuts
+R - rotate element
+
